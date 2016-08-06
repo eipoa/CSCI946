@@ -98,7 +98,6 @@ int main(int argc, char **argv) {
 			getline(inf, line);
 			// convert to lower case
 			transform(line.begin(), line.end(), line.begin(), ::tolower);
-			// bbbbb
 			// split word
 			size_t pos = line.find(" ");
 			while (pos != string::npos) {
