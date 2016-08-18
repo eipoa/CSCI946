@@ -54,17 +54,20 @@ public:
 	}
 };
 
+// implementation of intersection algorithm
 set<int> intersection(set<int> l, set<int> r) {
 	set<int> result;
 	set<int>::iterator itl, itr;
 	itl = l.begin();
 	itr = r.begin();
 	while (itl != l.end() && itr != r.end()) {
+		// if find the same docID
 		if (*itl == *itr) {
 			result.insert(*itl);
 			itl++;
 			itr++;
 		} else {
+			// advance iterator at the less side
 			if (*itl < *itr)
 				itl++;
 			else
@@ -75,7 +78,7 @@ set<int> intersection(set<int> l, set<int> r) {
 };
 
 void showUsage() {
-	cout << "Usage: ./inverted -c collection.txt -o inverted_index.txt" << endl;
+	cout << "Usage: ./search -c collection.txt -i inverted_index.txt" << endl;
 };
 
 int main(int argc, char **argv) {
@@ -92,7 +95,7 @@ int main(int argc, char **argv) {
 				showUsage();
 				return 1;
 			}
-		} else if (strcmp(argv[pindex], "-o") == 0) {
+		} else if (strcmp(argv[pindex], "-i") == 0) {
 			pindex++;
 			if (pindex < argc)
 				outfile = argv[pindex++];
@@ -156,9 +159,9 @@ int main(int argc, char **argv) {
 
 	// parse a query
 	bool halt = false;
-	string query = "rise AND july AND home AND in";
+	string query = "rise AND july";
 	multimap<int, set<int> > sortedpostlist;
-	// split the query into sorted multimap
+	// split the query into multimap sorted by frequency of the terms in query
 	size_t pos = query.find(" AND ");
 	while (pos != string::npos) {
 		term = query.substr(0, pos);
@@ -167,6 +170,7 @@ int main(int argc, char **argv) {
 		cout << "key = " << term << endl;
 #endif
 		if (term != "") {
+			// find the keyword within dictionary
 			it = DictPostings.find(term);
 			if (it != DictPostings.end()) {
 				sortedpostlist.insert(

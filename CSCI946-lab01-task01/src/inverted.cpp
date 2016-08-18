@@ -46,6 +46,8 @@ public:
 	;
 
 	void add(int d) {
+		// insert docId into posting list
+		// and increase freq
 		if (docIDList.insert(d).second)
 			freq++;
 	}
@@ -53,27 +55,29 @@ public:
 
 void showUsage() {
 	cout << "Usage: ./inverted -c collection.txt -o inverted_index.txt" << endl;
-};
+}
+;
 
 int main(int argc, char **argv) {
 	// cout << "lab01-task01" << endl; // prints lab01-task01
 	// default parameters
-	string infile = "collection.txt", outfile = "inverted_index.txt";
+	//string infile = "collection.txt", outfile = "inverted_index.txt";
+	string infile, outfile;
 	int pindex = 1;
 	while (pindex < argc) {
 		if (strcmp(argv[pindex], "-c") == 0) {
 			pindex++;
-			if (pindex < argc)
+			if (pindex < argc) {
 				infile = argv[pindex++];
-			else {
+			} else {
 				showUsage();
 				return 1;
 			}
 		} else if (strcmp(argv[pindex], "-o") == 0) {
 			pindex++;
-			if (pindex < argc)
+			if (pindex < argc) {
 				outfile = argv[pindex++];
-			else {
+			} else {
 				showUsage();
 				return 1;
 			}
@@ -103,6 +107,7 @@ int main(int argc, char **argv) {
 			while (pos != string::npos) {
 				term = line.substr(0, pos);
 				if (term != "") {
+					// insert into posting list
 					p.initPostingList(docID);
 					ret = DictPostings.insert(
 							pair<string, PostingList>(term, p));
