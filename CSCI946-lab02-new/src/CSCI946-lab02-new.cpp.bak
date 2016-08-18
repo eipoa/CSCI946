@@ -1,0 +1,510 @@
+//============================================================================
+// Name        : CSCI946-lab02-new.cpp
+// Author      : Baoxing Li
+// Version     :
+// Copyright   : bl251@uowmail.edu.au / sID: 5082497
+// Description : Hello World in C++, Ansi-style
+//============================================================================
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <cmath>
+#include <iomanip>
+#include <algorithm>
+#include <functional>
+#include <vector>
+#include <set>
+#include <map>
+#include <iterator>
+
+using namespace std;
+class Collection {
+private:
+	map<string, vector<double> > _termPair;  //vector<double>: (df, idf)
+	long N;	// total terms of whole collections
+public:
+	Collection() {
+		N = 0;
+		_termPair.clear();
+	}
+	pair<map<string, vector<double> >::iterator, bool> insertTermPair(string term, vector<double> other) {
+		return _termPair.insert(pair<double, vector<double>>(term, other));
+	}
+	;
+	void setN(long n) {
+		N = n;
+	}
+	;
+};
+class Query {
+private:
+	map<string, vector<double> > _termPair;  //vector<double>: (tfq, idf, weight)
+	double _length;
+public:
+	Query() {
+		_length = 0;
+		_termPair.clear();
+	}
+	;
+	pair<map<string, vector<double> >::iterator, bool> insertTermPair(string term, vector<double> other) {
+		return _termPair.insert(pair<double, vector<double>>(term, other));
+	}
+	;
+	map<string, vector<double> > & getPair() const {
+		return _termPair;
+	}
+	;
+};
+
+class Document {
+private:
+	int _docID;
+	double _Score;
+	map<string, vector<double> > _termPair;  //vector<double>: (tfd, idf, weight)
+	double _length;
+public:
+	Document(int id) {
+		_docID = id;
+		_Score = 0;
+		_length = 0;
+		_termPair.clear();
+	}
+	;
+	pair<map<string, vector<double> >::iterator, bool> insertTermPair(string term, vector<double> other) {
+		return _termPair.insert(pair<double, vector<double>>(term, other));
+	}
+	;
+
+	void setWeight(map<string, vector<double> > &idfList) {
+
+	}
+	;
+
+	void setScore(map<string, vector<double> > &queryList) {
+
+	}
+	;
+	map<string, vector<double> > & getPair() const {
+		return _termPair;
+	}
+	;
+};
+
+// a simple argument parser
+// can only parse -a xxx -b xxx -c xxx -d xxx
+// can not parse -a xxx yyy zzz mmm
+class InputParser {
+private:
+	std::vector<string> tokens;
+public:
+	InputParser(int &argc, char **argv) {
+		for (int i = 1; i < argc; ++i)
+			this->tokens.push_back(string(argv[i]));
+	}
+
+	const string getCmdOption(const string &option) const {
+		vector<string>::const_iterator itr;
+		itr = find(this->tokens.begin(), this->tokens.end(), option);
+		if (itr != this->tokens.end() && ++itr != this->tokens.end()) {
+			return *itr;
+		}
+		return "";
+	}
+};
+
+vector<string> split(string str, string delimiter = ",") {
+	vector<string> result;
+	string a = str;
+	size_t pos = 0;
+	string token;
+	while ((pos = str.find(delimiter)) != string::npos) {
+		token = str.substr(0, pos);
+		result.push_back(token);
+		str.erase(0, pos + delimiter.length());
+	}
+	if (str.length() != 0)
+		result.push_back(str);
+
+#ifdef INFO
+	cout << endl;
+	cout << "-----------------------------------------------------------------------------------" << endl;
+	cout << "split string... [" << a << "]" << endl;
+	cout << "-----------------------------------------------------------------------------------" << endl;
+	//copy(result.begin(), result.end(), ostream_iterator<string>(cout, " + "));
+	int i = 0;
+	for (vector<string>::iterator it = result.begin(); it != result.end(); ++it) {
+		cout << "result[" << i << "] = " << (*it) << endl;
+		i++;
+	}
+	cout << endl;
+#endif
+
+	return result;
+}
+
+template<class out_type, class in_value>
+out_type convert(const in_value & v) {
+	stringstream stream;
+	stream << v;
+	out_type result;
+	stream >> result;
+	return result;
+}
+
+/**
+ * @queryList is a [query vector], for example
+ * 		terms      <tfq     tf*idf>
+ * 		car        1        0.12
+ * 		best       1        0
+ * @k is the range to return, like top 2, top 3...
+ * @return is sorted [score multimap] order by score desc
+ *      score      <docid    <terms    tf    idf>>
+ *      0.99       3          car      1.5   0.7
+ *      0.87       1
+ */
+multimap<double, map<int, map<string, vector<double> > >, greater<double> > CosineScore(map<int, map<string, vector<double> > > &docList,
+		map<string, vector<double> > &queryList, int k) {
+	multimap<double, map<int, map<string, vector<double> > >, greater<double> > score;
+
+	double tmpScore = 0;
+	double docLength, queryLength;
+	queryLength = queryList.begin()->second[2];
+#ifdef INFO
+	cout << "queryLength=" << queryLength << endl;
+#endif
+	for (map<int, map<string, vector<double> > >::iterator itc = docList.begin(); itc != docList.end(); ++itc) {
+		docLength = itc->second.begin()->second[2];
+#ifdef INFO
+		cout << "docLength=" << docLength << endl;
+#endif
+		tmpScore = 0;
+		for (map<string, vector<double> >::iterator itd = itc->second.begin(); itd != itc->second.end(); ++itd) {
+			map<string, vector<double> >::iterator itq;
+			itq = queryList.find(itd->first);
+			if (itq != queryList.end()) {
+#ifdef INFO
+				cout << "trem= " << itd->first << endl;
+				cout << "itd->second[1]= " << itd->second[1] << endl;
+				cout << "itq->second[1]= " << itq->second[1] << endl;
+#endif
+				tmpScore = tmpScore + itd->second[1] * itq->second[1];
+			} else {
+				cout << "ERROR: ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ " << endl;
+			}
+		}
+		//itc->second.begin()->second[3] = tmpScore / sqrt(docLength) / sqrt(queryLength);
+		tmpScore = tmpScore / docLength / queryLength;
+		itc->second.begin()->second[3] = tmpScore;
+
+		score.insert(pair<double, map<int, map<string, vector<double> > > >(tmpScore, (*itc)));
+
+#ifdef INFO
+		cout << "tmpScore= " << tmpScore << endl << endl;
+		cout << "Score= " << itc->second.begin()->second[3] << endl << endl;
+#endif
+	}
+	score.erase(score.begin() + k, score.end());
+	return score;
+}
+
+int main(int agrc, char ** argv) {
+//cout << "lab02-new" << endl; // prints lab02-new
+// parse argument
+// searchv -t reuters-tf.dat -d reuters-df.dat -q best,car,insurance
+	InputParser argument(agrc, argv);
+	string tf_file = argument.getCmdOption("-t");
+	string df_file = argument.getCmdOption("-d");
+	string queryStr = argument.getCmdOption("-q");
+	int K = 2;
+	vector<string> tmpVectorString;
+	vector<double> tmpVectorDouble;
+	vector<double> tmpValue;
+
+	map<int, Document> _collection;
+
+// calculate idf according to file [df_file]
+// @idfList: sorted word-idf list.
+	/*
+	 --------------------------------------------------------------------------------------------
+	 Terms       df          idf=log(N/df) based(10) N=806791
+	 --------------------------------------------------------------------------------------------
+	 auto        6723        2.0792
+	 best        25235       1.50476
+	 car         18165       1.64753
+	 insurance   19241       1.62253
+	 */
+	map<string, vector<double> > idfList;
+	Collection idf;
+	int N;
+// first step: read file, get df & N
+	fstream df(df_file.c_str(), ios::in);
+	if (df.is_open()) {
+		string term;
+// the last line
+		int keypos;
+		int termcount;
+		while (!df.eof()) {
+			df >> term;
+			// if the last line
+			if (df.peek() != EOF) {
+				df >> termcount;
+				tmpValue.clear();
+				tmpValue.push_back(termcount);
+				tmpValue.push_back(termcount);
+				idfList.insert(pair<string, vector<double> >(term, tmpValue));
+				keypos = df.tellg();
+			} else {
+				// get the last line
+				df.clear();
+				df.seekg(keypos, df.beg);
+				df >> N;
+			}
+		}
+	}
+// second step: calculate idf = log(N/df)
+	int logBase = 10;
+#ifdef BASE2
+	logBase = 2;
+#endif
+#ifdef NDEBUG
+	cout << endl;
+	cout << "-----------------------------------------------------------------------------------" << endl;
+	cout << setw(12) << left << "Terms" << setw(12) << left << "df" << setw(12) << left << "idf=log(N/df) based(" << logBase << ") N=" << N << endl;
+	cout << "-----------------------------------------------------------------------------------" << endl;
+#endif
+	for (map<string, vector<double> >::iterator it = idfList.begin(); it != idfList.end(); ++it) {
+		it->second[1] = log10(N / it->second[1]) / log10(logBase);
+#ifdef NDEBUG
+		cout << setw(12) << left << it->first << setw(12) << left << it->second[0] << setw(12) << left << it->second[1] << endl;
+#endif
+	}
+
+//generate query
+// @queryList: sorted word-weight list.
+
+	/*
+	 --------------------------------------------------------------------------------------------
+	 query_Terms tf(q)       weight(t,q)=qtf * idf
+	 --------------------------------------------------------------------------------------------
+	 auto        0           0
+	 best        1           1.50476
+	 car         1           1.64753
+	 insurance   1           1.62253
+	 */
+
+// first step: copy idfList to queryList
+	map<string, vector<double> > queryList(idfList.begin(), idfList.end());
+// second step: if term in idfList is not in queryStr, then set weight value to 0, otherwise 1
+// split queryString
+	tmpVectorString = split(queryStr);
+	set<string> qyery(tmpVectorString.begin(), tmpVectorString.end());
+	for (map<string, vector<double> >::iterator it = queryList.begin(); it != queryList.end(); ++it) {
+		if (qyery.find(it->first) == qyery.end()) {
+			it->second[0] = 0;
+			it->second[1] = 0;
+		} else {
+			it->second[0] = 1;
+			// length
+			queryList.begin()->second[2] = queryList.begin()->second[2] + pow(it->second[1], 2);
+		}
+	}
+	// calculate query length
+	queryList.begin()->second[2] = sqrt(queryList.begin()->second[2]);
+
+#ifdef NDEBUG
+	cout << endl;
+	cout << "-----------------------------------------------------------------------------------" << endl;
+	cout << setw(12) << left << "query_Terms" << setw(12) << left << "tf(q)" << setw(25) << left << "weight(t,q)=qtf * idf" << setw(12) << left
+			<< "length" << endl;
+	cout << "-----------------------------------------------------------------------------------" << endl;
+	for (map<string, vector<double> >::iterator it = queryList.begin(); it != queryList.end(); ++it) {
+		if (it != queryList.begin())
+			cout << setw(12) << left << it->first << setw(12) << left << it->second[0] << setw(25) << left << it->second[1] << endl;
+		else
+			cout << setw(12) << left << it->first << setw(12) << left << it->second[0] << setw(25) << left << it->second[1] << setw(12) << left
+					<< it->second[2] << endl;
+	}
+#endif
+//generate documents dictionary
+	map<int, map<string, vector<double> > > docList;
+	map<int, map<string, vector<double> > >::iterator dlIt;
+//@docList
+	/*
+	 --------------------------------------------------------------------------------------------
+	 doc_ID      terms       tf(d)       weight(t,d)=dtf * idf
+	 --------------------------------------------------------------------------------------------
+	 1           auto        3           6.23759
+	 best        14          21.0666
+	 car         27          44.4832
+	 insurance   0           0
+	 2           auto        33          68.6135
+	 best        0           0
+	 car         4           6.5901
+	 insurance   33          53.5436
+	 3           auto        0           0
+	 best        17          25.5809
+	 car         24          39.5406
+	 insurance   29          47.0535
+	 */
+
+	fstream tf(tf_file.c_str(), ios::in);
+	set<string> docterm;
+	if (tf.is_open()) {
+		string line;
+		map<string, vector<double> > tmpMap;
+		while (!tf.eof()) {
+			getline(tf, line);
+			tmpVectorString = split(line, " ");
+			for (int i = 1; i < tmpVectorString.size(); ++i) {
+				// find the file ID in docList
+				dlIt = docList.find(i);
+				if (dlIt == docList.end()) {
+					tmpMap.clear();
+					//car 27 4 24
+					//0   1  2 3
+					//tf*idf
+					tmpVectorDouble.clear();
+					tmpVectorDouble.push_back(convert<double, string>(tmpVectorString[i]));
+					tmpVectorDouble.push_back(convert<double, string>(tmpVectorString[i]) * idfList.find(tmpVectorString[0])->second[1]);
+					tmpVectorDouble.push_back(pow(tmpVectorDouble[1], 2));
+					tmpMap.insert(pair<string, vector<double> >(tmpVectorString[0], tmpVectorDouble));
+					// new file ID
+					docList.insert(pair<int, map<string, vector<double> > >(i, tmpMap));
+				} else {
+					// new word dict, tf*idf
+					tmpVectorDouble.clear();
+					tmpVectorDouble.push_back(convert<double, string>(tmpVectorString[i]));
+					tmpVectorDouble.push_back(convert<double, string>(tmpVectorString[i]) * idfList.find(tmpVectorString[0])->second[1]);
+					dlIt->second.begin()->second[2] = dlIt->second.begin()->second[2] + pow(tmpVectorDouble[1], 2); //length
+					tmpVectorDouble.push_back(dlIt->second.begin()->second[2]); // all row has the same length, later i will use the first one.
+					dlIt->second.insert(pair<string, vector<double> >(tmpVectorString[0], tmpVectorDouble));
+				}
+
+			}
+
+		}
+	}
+	// calculate doc length
+	for (dlIt = docList.begin(); dlIt != docList.end(); ++dlIt) {
+		for (map<string, vector<double> >::iterator itd = dlIt->second.begin(); itd != dlIt->second.end(); ++itd) {
+			if (itd == dlIt->second.begin())
+				itd->second[2] = sqrt(itd->second[2]);
+			else
+				itd->second[2] = 0;
+		}
+	}
+	multimap<double, map<int, map<string, vector<double> > >, greater<double> > score;
+	score = CosineScore(docList, queryList, K);
+
+#ifdef NDEBUG
+	cout << endl;
+	cout << "-----------------------------------------------------------------------------------" << endl;
+	cout << setw(12) << left << "doc_ID" << setw(12) << left << "terms" << setw(12) << left << "tf(d)" << setw(25) << left << "weight(t,d)=dtf * idf"
+			<< setw(12) << left << "length" << setw(12) << left << "score" << endl;
+	cout << "-----------------------------------------------------------------------------------" << endl;
+	for (dlIt = docList.begin(); dlIt != docList.end(); ++dlIt) {
+// output docID
+		cout << setw(12) << left << dlIt->first;
+// output word & weight
+		for (map<string, vector<double> >::iterator it = dlIt->second.begin(); it != dlIt->second.end(); ++it) {
+			if (it == dlIt->second.begin())
+				cout << setw(12) << left << it->first << setw(12) << left << it->second[0] << setw(25) << left << it->second[1] << setw(12) << left
+						<< it->second[2] << setw(12) << left << it->second[3] << endl;
+			else
+				cout << setw(12) << left << "" << setw(12) << left << it->first << setw(12) << left << it->second[0] << setw(25) << left
+						<< it->second[1] << endl;
+		}
+		cout << "-----------------------------------------------------------------------------------" << endl;
+	}
+#endif
+
+#ifdef NDEBUG
+	cout << endl;
+	cout << "----- K= " << K << "  The result is : ------" << endl;
+	cout << "-----------------------------------------------------------------------------------" << endl;
+	cout << setw(12) << left << "score" << setw(12) << left << "doc_ID" << endl;
+	cout << "-----------------------------------------------------------------------------------" << endl;
+	multimap<double, map<int, map<string, vector<double> > >, greater<double> >::iterator itscore;
+	for (itscore = score.begin(); itscore != score.end(); ++dlIt) {
+		cout << setw(12) << left << itscore->first << setw(12) << left << itscore->second.begin()->first << endl;
+		cout << "-----------------------------------------------------------------------------------" << endl;
+	}
+#endif
+
+	return 0;
+
+	/*
+	 --------------------------------------------------------------------------------------------
+	 Terms       df          idf=log(N/df) based(2) N=806791
+	 --------------------------------------------------------------------------------------------
+	 auto        6723        6.90695
+	 best        25235       4.9987
+	 car         18165       5.47296
+	 insurance   19241       5.38994
+
+	 --------------------------------------------------------------------------------------------
+	 query_Terms tf(q)       weight(t,q)=qtf * idf    length
+	 --------------------------------------------------------------------------------------------
+	 auto        0           0                        9.1647
+	 best        1           4.9987
+	 car         1           5.47296
+	 insurance   1           5.38994
+
+	 --------------------------------------------------------------------------------------------
+	 doc_ID      terms       tf(d)       weight(t,d)=dtf * idf    length      score
+	 --------------------------------------------------------------------------------------------
+	 1           auto        3           20.7208                  164.811     0.76703
+	 best        14          69.9818
+	 car         27          147.77
+	 insurance   0           0
+	 --------------------------------------------------------------------------------------------
+	 2           auto        33          227.929                  289.945     0.405874
+	 best        0           0
+	 car         4           21.8918
+	 insurance   33          177.868
+	 --------------------------------------------------------------------------------------------
+	 3           auto        0           0                        221.148     0.979964
+	 best        17          84.9778
+	 car         24          131.351
+	 insurance   29          156.308
+	 --------------------------------------------------------------------------------------------
+
+	 -----------------------------------------------------------------------------------
+	 Terms       df          idf=log(N/df) based(10) N=806791
+	 -----------------------------------------------------------------------------------
+	 auto        6723        2.0792
+	 best        25235       1.50476
+	 car         18165       1.64753
+	 insurance   19241       1.62253
+
+	 -----------------------------------------------------------------------------------
+	 query_Terms tf(q)       weight(t,q)=qtf * idf    length
+	 -----------------------------------------------------------------------------------
+	 auto        0           0                        2.75885
+	 best        1           1.50476
+	 car         1           1.64753
+	 insurance   1           1.62253
+
+	 -----------------------------------------------------------------------------------
+	 doc_ID      terms       tf(d)       weight(t,d)=dtf * idf    length      score
+	 -----------------------------------------------------------------------------------
+	 1           auto        3           6.23759                  49.6131     0.76703
+	 best        14          21.0666
+	 car         27          44.4832
+	 insurance   0           0
+	 -----------------------------------------------------------------------------------
+	 2           auto        33          68.6135                  87.2821     0.405874
+	 best        0           0
+	 car         4           6.5901
+	 insurance   33          53.5436
+	 -----------------------------------------------------------------------------------
+	 3           auto        0           0                        66.5723     0.979964
+	 best        17          25.5809
+	 car         24          39.5406
+	 insurance   29          47.0535
+	 -----------------------------------------------------------------------------------
+	 */
+}
+
