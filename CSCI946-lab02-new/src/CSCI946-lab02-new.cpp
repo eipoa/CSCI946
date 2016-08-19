@@ -172,7 +172,16 @@ public:
 		_length = sqrt(_length);
 	}
 	;
-	void CalculateScore(Query &query) {
+	// plus all weight of terms if the term is in query
+	void CalculateScore0(Query &query) {
+		for (map<string, vector<double> >::iterator it = _termPair.begin(); it != _termPair.end(); ++it) {
+			if (query.getPair().find(it->first) != query.getPair().end() && query.getPair().find(it->first)->second[1] != 0)
+				_Score = _Score + it->second[1];
+		}
+	}
+	;
+	// (d dot product q)/|d||q|
+	void CalculateScore1(Query &query) {
 		for (map<string, vector<double> >::iterator it = _termPair.begin(); it != _termPair.end(); ++it) {
 			_Score = _Score + (query.getPair().find(it->first)->second[1] * it->second[1]);
 		}
@@ -370,7 +379,10 @@ int main(int agrc, char ** argv) {
 	for (it_doc = document.begin(); it_doc != document.end(); ++it_doc) {
 		it_doc->second.setDocID(it_doc->first);
 		it_doc->second.CalculateWeightLength(idf);
-		it_doc->second.CalculateScore(query);
+		it_doc->second.CalculateScore0(query);
+#ifdef COSINE
+		it_doc->second.CalculateScore1(query);
+#endif
 		outf << it_doc->second;
 		Score.insert(it_doc->second);
 	}
@@ -391,9 +403,9 @@ int main(int agrc, char ** argv) {
 	return 0;
 
 	/*
-g++ -o csci946-lba02 ./src/CSCI946-lab02-new.cpp
-g++ -o csci946-lba02 ./src/CSCI946-lab02-new.cpp -DBASE2
-./csci946-lba02.exe -t reuters-tf.dat -d reuters-df.dat -q best,car,insurance -o output.log
+	 g++ -o csci946-lba02 ./src/CSCI946-lab02-new.cpp
+	 g++ -o csci946-lba02 ./src/CSCI946-lab02-new.cpp -DBASE2
+	 ./csci946-lba02.exe -t reuters-tf.dat -d reuters-df.dat -q best,car,insurance -o output.log
 
 	 */
 }
