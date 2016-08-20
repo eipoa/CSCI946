@@ -51,22 +51,50 @@ public:
 	}
 };
 
-vector<string> getFileNames(string ids) {
-	vector<string> result;
+struct _Image {
+	string _docId;
+	string _datetime;
+	_Image(string id, string d) {
+		_docId = id;
+		_datetime = d;
+	}
+	;
+};
+
+vector<_Image> getFileNames(string ids) {
+	vector<_Image> result;
 	string id;
 	size_t pos = ids.find(",");
+	size_t posStar;
+	string docid = "";
+	string dt = "";
 	while (pos != string::npos) {
 		id = ids.substr(0, pos);
 		if (id != "") {
-			id = "im" + id + ".jpg";
-			result.push_back(id);
+			posStar = id.find("*");
+			if (posStar != string::npos) {
+				docid = "im" + id.substr(0, posStar) + ".jpg";
+				dt = id.substr(posStar + 1);
+			} else {
+				docid = id;
+				dt = "";
+			}
+			result.push_back(_Image(docid, dt));
 		}
 		ids.erase(0, pos + 1);
 		pos = ids.find(",");
 	}
 	if (ids != "") {
-		ids = "im" + ids + ".jpg";
-		result.push_back(ids);
+		id = ids;
+		posStar = id.find("*");
+		if (posStar != string::npos) {
+			docid = "im" + id.substr(0, posStar) + ".jpg";
+			dt = id.substr(posStar + 1);
+		} else {
+			docid = id;
+			dt = "";
+		}
+		result.push_back(_Image(docid, dt));
 	}
 	return result;
 }
@@ -81,14 +109,14 @@ string getHtmlHeader(string query) {
 	html = html + "	<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>";
 	html = html + "	<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
 	html = html + "	<title>Image retrieve result</title>";
-	html = html + "	<link rel='stylesheet' type='text/css' href='css/normalize.css' />";
-	html = html + "	<link rel='stylesheet' type='text/css' href='css/default.css'>";
+	html = html + "	<link rel='stylesheet' type='text/css' href='./html/css/normalize.css' />";
+	html = html + "	<link rel='stylesheet' type='text/css' href='./html/css/default.css'>";
 	html = html + "	<style>";
 	html = html + "	@font-face{font-family:'Calluna';";
-	html = html + "		src:url('fonts/callunasansregular-webfont.woff') format('woff');";
+	html = html + "		src:url('./html/fonts/callunasansregular-webfont.woff') format('woff');";
 	html = html + "	}";
 	html = html + "	body {";
-	html = html + "		background: url(img/scribble_light.png);";
+	html = html + "		background: url(./html/img/scribble_light.png);";
 	html = html + "		font-family: Calluna, Arial, sans-serif;";
 	html = html + "		min-height: 1000px;";
 	html = html + "	}";
@@ -151,12 +179,17 @@ string getHtmlHeader(string query) {
 }
 ;
 
-string getHtmlBody(vector<string> imgs) {
+string getHtmlBody(vector<_Image> imgs) {
 	string html = "";
-	for (vector<string>::iterator it = imgs.begin(); it != imgs.end(); ++it) {
+	for (vector<_Image>::iterator it = imgs.begin(); it != imgs.end(); ++it) {
 		html = html + "			<figure>";
-		html = html + "				<img src='../a1data/thumbnails/" + (*it) + "'>";
-		html = html + "				<figcaption>" + (*it) + "</figcaption>";
+		html = html + "				<img src='./thumbnails/" + it->_docId + "'>";
+		if (it->_datetime == "") {
+			html = html + "				<figcaption>" + it->_docId + "</figcaption>";
+		} else {
+			html = html + "				<figcaption>" + it->_docId + "<br>";
+			html = html + it->_datetime + "</figcaption>";
+		}
 		html = html + "			</figure>";
 	}
 	return html;
@@ -172,15 +205,42 @@ string getHtmlFooter() {
 }
 ;
 
+template<class out_type, class in_value>
+out_type convert(const in_value & v) {
+	stringstream stream;
+	stream << v;
+	out_type result;
+	stream >> result;
+	return result;
+}
+;
+
 int main(int argc, char** argv) {
 	InputParser argument(argc, argv);
-	string phtmlFile = "./html/" + argument.getCmdOption("-p");
-	string pquery = argument.getCmdOption("-q");
-	string pIDs = argument.getCmdOption("-f");
+	string phtmlFile = argument.getCmdOption("-p");
+
+	// get query & IDs
+	string pquery;
+	string pIDs;
+	string row;
+	if (!cin.eof()) {
+		getline(cin, row);
+	};
+	size_t posq = row.find("-q ");
+	size_t posf = row.find("-f ");
+	if (posq != string::npos && posf != string::npos) {
+		if (posq < posf) {
+			pquery = row.substr(posq + 3, posf - posq - 4);
+			pIDs = row.substr(posf + 3);
+		} else {
+			pIDs = row.substr(posf + 3, posq - posf - 4);
+			pquery = row.substr(posq + 3);
+		}
+	}
 
 	// get all IDs
-	vector<string> fileNames = getFileNames(pIDs);
-	string html = getHtmlHeader(pquery);
+	vector<_Image> fileNames = getFileNames(pIDs);
+	string html = getHtmlHeader(pquery + " / result: " + convert<string, int>(fileNames.size()) + "");
 	html = html + getHtmlBody(fileNames);
 	html = html + getHtmlFooter();
 
