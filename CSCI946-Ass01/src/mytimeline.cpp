@@ -96,14 +96,61 @@ out_type convert(const in_value & v) {
 }
 ;
 
-string getAppropriateDT(string &dt1, string &dt2){
-	string dt;
-
-	return dt;
+void formatDateTime(string &t) {
+	string szShortDays[7] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+	string szShortMonths[12] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+	if (t.length() == 25) {
+		// 2007-06-30T16:06:24-04:00
+		//cout << t << " -> ";
+		t = t.substr(0, 10) + " " + t.substr(11, 8);
+		//cout << t << endl;
+	} else if (t.length() == 24) {
+		// Sun Sep  2 07:27:20 2007
+		string sd = t.substr(0, 3);
+		string sm = t.substr(4, 3);
+		for (int i = 0; i < 7; ++i) {
+			if (sd == szShortDays[i]) {
+				sd = convert<string, int>(i + 1);
+				if (sd.length() == 1) {
+					sd = "0" + sd;
+				}
+			}
+		}
+		for (int i = 0; i < 12; ++i) {
+			if (sm == szShortMonths[i]) {
+				sm = convert<string, int>(i + 1);
+				if (sm.length() == 1) {
+					sm = "0" + sm;
+				}
+			}
+		}
+		//cout << t << " -> ";
+		if (t.substr(8, 1) == " ")
+			t = t.substr(20, 4) + ":" + sm + ":0" + t.substr(9, 1) + " " + t.substr(11, 8);
+		else
+			t = t.substr(20, 4) + ":" + sm + ":" + t.substr(8, 2) + " " + t.substr(11, 8);
+		//cout << t << endl;
+	} else if (t.length() == 19) {
+		// Sat Jun 14 19:35:12 or 2008:06:22 16:12:58
+		//cout << t << " -> ";
+		string sd = t.substr(0, 3);
+		for (int i = 0; i < 7; ++i) {
+			if (sd == szShortDays[i]) {
+				t = "0000:00:00 00:00:00";
+				break;
+			}
+		}
+		//cout << t << endl;
+	} else {
+		// cannot recognize
+		//cout << t << " -> ";
+		t = "0000:00:00 00:00:00";
+		//cout << t << endl;
+	}
 }
-;
+
 int main(int argc, char** argv) {
-	// get query & IDs
+// get query & IDs
 	string pquery;
 	string pIDs;
 	string row;
@@ -122,10 +169,10 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	// read files to get info of images
-	// -Date and Time (Original)
-	// note that some images have no infomation
-	// so give them a uniform datetime "0000:00:00 00:00:00"
+// read files to get info of images
+// -Date and Time (Original)
+// note that some images have no infomation
+// so give them a uniform datetime "0000:00:00 00:00:00"
 	vector<string> fileNames = getFileNames(pIDs);
 	set<ImageInfo, compImageInfo> result;
 	for (vector<string>::iterator it = fileNames.begin(); it != fileNames.end(); ++it) {
@@ -136,26 +183,31 @@ int main(int argc, char** argv) {
 			while (!imgf.eof()) {
 				getline(imgf, row);
 				// if find the key row
-				if (row == "-Date and Time" && imgf.peek() != EOF) {
-					getline(imgf, dt1);
-				}
+				/*if (row == "-Date and Time" && imgf.peek() != EOF) {
+				 getline(imgf, dt1);
+				 formatDateTime(dt1);
+				 //break;
+				 }*/
 				if (row == "-Date and Time (Original)" && imgf.peek() != EOF) {
 					getline(imgf, dt2);
-					//break;
+					formatDateTime(dt2);
+					break;
 				}
 			}
 			imgf.close();
 		}
 		// chose an appropriate datetime
-		if (dt == "")
-			dt = "0000:00:00 00:00:00";
+		dt = dt2;
 		ImageInfo img(convert<int, string>(*it), dt);
 		result.insert(img);
 	}
 
 	string outstr = "-q " + pquery + " -f ";
 	for (set<ImageInfo>::iterator it = result.begin(); it != result.end(); ++it) {
-		outstr = outstr + convert<string, int>(it->getDocId()) + "*" + it->getDatetime() + ",";
+		if (it->getDatetime() != "")
+			outstr = outstr + convert<string, int>(it->getDocId()) + "*" + it->getDatetime() + ",";
+		else
+			outstr = outstr + convert<string, int>(it->getDocId()) + ",";
 	}
 	cout << outstr;
 	return 0;
