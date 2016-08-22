@@ -258,7 +258,7 @@ out_type convert(const in_value & v) {
 int main(int agrc, char ** argv) {
 	//cout << "lab02-new" << endl; // prints lab02-new
 	// parse argument
-	// searchv -t reuters-tf.dat -d reuters-df.dat -q best,car,insurance
+	// searchv -t reuters-tf.dat -d reuters-df.dat -q best,car,insurance -o output.log
 	InputParser argument(agrc, argv);
 	string tf_file = argument.getCmdOption("-t");
 	string df_file = argument.getCmdOption("-d");
@@ -379,7 +379,7 @@ int main(int agrc, char ** argv) {
 	for (it_doc = document.begin(); it_doc != document.end(); ++it_doc) {
 		it_doc->second.setDocID(it_doc->first);
 		it_doc->second.CalculateWeightLength(idf);
-		it_doc->second.CalculateScore0(query);
+		//it_doc->second.CalculateScore0(query);
 #ifdef COSINE
 		it_doc->second.CalculateScore1(query);
 #endif
@@ -404,6 +404,7 @@ int main(int agrc, char ** argv) {
 
 	/*
 	 g++ -o csci946-lba02 ./src/CSCI946-lab02-new.cpp
+	 g++ -o csci946-lba02 ./src/CSCI946-lab02-new.cpp -DCOSINE
 	 g++ -o csci946-lba02 ./src/CSCI946-lab02-new.cpp -DBASE2
 	 ./csci946-lba02.exe -t reuters-tf.dat -d reuters-df.dat -q best,car,insurance -o output.log
 
