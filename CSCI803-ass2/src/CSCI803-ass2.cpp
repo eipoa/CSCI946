@@ -15,21 +15,6 @@
 
 using namespace std;
 
-// type cast
-template<class out_type, class in_value>
-out_type convert(const in_value & v) {
-	stringstream stream;
-	stream << v;
-	out_type result;
-	stream >> result;
-	return result;
-}
-
-template<typename T, int size>
-void _oneQueueSimulation(T (&heap)[size]) {
-
-}
-
 struct Event {
 	friend ostream & operator<<(ostream &out, const Event &obj) {
 		out << setw(12) << left << obj.arrive_time << "  " << setw(12) << left << obj.server_time;
