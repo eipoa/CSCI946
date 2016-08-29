@@ -15,62 +15,73 @@
 
 using namespace std;
 
-struct Event {
-	friend ostream & operator<<(ostream &out, const Event &obj) {
+// class for Customer
+struct Customer {
+	friend ostream & operator<<(ostream &out, const Customer &obj) {
 		out << setw(12) << left << obj.arrive_time << "  " << setw(12) << left << obj.server_time;
 		return out;
 	}
 	double arrive_time;
 	double server_time;
-	Event() {
+	Customer() {
 		arrive_time = 0;
 		server_time = 0;
 	}
-	Event(double a, double s) :
+	Customer(double a, double s) :
 			arrive_time(a), server_time(s) {
 	}
-	bool operator <(const Event &e) const {
+	bool operator <(const Customer &e) const {
 		return arrive_time < e.arrive_time;
 	}
-	bool operator >(const Event &e) const {
+	bool operator >(const Customer &e) const {
 		return arrive_time > e.arrive_time;
 	}
 };
 
-struct Simulation {
-	friend ostream & operator<<(ostream &out, const Simulation & obj) {
+// class for Heap or queue
+// note the element 0 is forbidden to use!!!
+// the first element is from 1 !!!
+template<class T>
+struct Heap {
+	friend ostream & operator<<(ostream &out, const Heap & obj) {
 		out << "size = " << obj.size << "     count = " << obj.count << endl;
-		for (int i = 0; i < obj.count; ++i) {
+		// please overload << for T object
+		for (int i = 1; i <= obj.count; ++i) {
 			out << i << "  " << obj[i] << endl;
 		}
 		out << "size = " << obj.size << "     count = " << obj.count << endl;
 		return out;
 	}
-	// size of the heap;
+	// size of the space of heap;
 	int size;
-	// count of all available Event;
+	// count of all available element;
 	int count;
-	// dynamic array for storing Event object;
-	Event *queue;
+	// Maximum lenght of queue
+	int maxLength;
+	// dynamic array for storing object T;
+	T *queue;
+	// heap type smallest on top(0) all biggest on top(1)
+	int type;
 	// initial fifty space;
-	Simulation() {
-		size = 50;
+	Heap() {
+		type = 0;
+		size = 51; // the index is from 1, so 51 is better
 		count = 0;
-		queue = new Event[size];
+		maxLength = 0;
+		queue = new T[size]; // 1..50
 	}
-	;
 	// delete all space
-	~Simulation() {
+	~Heap() {
 		delete[] queue;
 	}
 	// apply new space
 	void extend(int c = 50) {
-		Event *tmp;
+		T *tmp;
 		// allocate new space
-		tmp = new Event[size + c];
+		tmp = new T[size + c];
 		size = size + c;
-		// copy elements
-		for (int i = 0; i < count; i++) {
+		// copy elements, please overload = to do deep copy
+		for (int i = 1; i <= count; i++) {
 			tmp[i] = queue[i];
 		}
 		// deallocate old space
@@ -78,80 +89,147 @@ struct Simulation {
 		queue = tmp;
 	}
 	// small root heap
-	void siftup(int i) {
+	void siftup0(int i) {
 		// it is root
-		if (i == 0)
+		if (i == 1)
 			return;
-		int p = (i - 1) / 2;
-#ifdef NDEBUG
-		cout << "i = " << i << "  p = " << p << endl;
-#endif
-		if (queue[p] < queue[i]) {
-			return;
-		} else {
-			// if ftaher > child
-#ifdef NDEBUG
-			cout << "before " << *this;
-#endif
-			Event tmp;
+		// get father
+		int p = i / 2;
+		if (queue[p] > queue[i]) {
+			// if father > child
+			T tmp;
 			tmp = queue[i];
 			queue[i] = queue[p];
 			queue[p] = tmp;
-#ifdef NDEBUG
-			cout << "after " << *this;
-#endif
-			siftup(p);
+			siftup0(p);
+		}
+	}
+	void siftup1(int i) {
+		// it is root
+		if (i == 1)
+			return;
+		// get father
+		int p = i / 2;
+		if (queue[p] < queue[i]) {
+			// if father < child
+			T tmp;
+			tmp = queue[i];
+			queue[i] = queue[p];
+			queue[p] = tmp;
+			siftup0(p);
 		}
 	}
 	// small root heap
-	void siftdown(int i) {
+	void siftdown0(int i) {
 		// left child
-		int c = i * 2 + 1;
+		int c = i * 2;
 		// node i has no children
-		if (c >= count) {
+		if (c > count) {
 			return;
 		}
 		// if node i has right child
 		// chose the smallest node
-		if (c + 1 < count) {
-			if (queue[c + 1] < queue[c]) {
+		if (c + 1 <= count) {
+			if (queue[c] > queue[c + 1]) {
 				c = c + 1;
 			}
 		}
-		if (queue[c] > queue[i]) {
-			// if ftaher < child
-			Event tmp;
+		if (queue[i] > queue[c]) {
+			// if father < child
+			T tmp;
 			tmp = queue[i];
 			queue[i] = queue[c];
 			queue[c] = tmp;
-			siftdown(c);
+			siftdown0(c);
 		}
 	}
-	void push(Event e) {
+	void siftdown1(int i) {
+		// left child
+		int c = i * 2;
+		// node i has no children
+		if (c > count) {
+			return;
+		}
+		// if node i has right child
+		// chose the smallest node
+		if (c + 1 <= count) {
+			if (queue[c] < queue[c + 1]) {
+				c = c + 1;
+			}
+		}
+		if (queue[i] < queue[c]) {
+			// if father > child
+			T tmp;
+			tmp = queue[i];
+			queue[i] = queue[c];
+			queue[c] = tmp;
+			siftdown0(c);
+		}
+	}
+	void push(T e) {
 		// the queue is full
-		if (count == size) {
+		if (count == size - 1) {
 			extend();
 		}
-		queue[count] = e;
-#ifdef NDEBUG
-		cout << "push : "<< e << count << endl;
-#endif
+		// add object at the tail
 		count++;
-		siftup(count - 1);
+		queue[count] = e;
+		if(count>maxLength){
+			maxLength = count;
+		}
+		if (type == 0)
+			siftup0(count);
+		else
+			siftup1(count);
 	}
 	void pop() {
+		//
 		//Event tmp=queue[0];
-		queue[0] = queue[count - 1];
+		queue[1] = queue[count];
 		//queue[count]=tmp;
 		count--;
-		siftdown(0);
+		if (type == 0)
+			siftdown0(0);
+		else
+			siftdown1(0);
 	}
-	Event & operator[](const int idx) const {
-		if (idx > count - 1)
+	T & operator[](const int idx) const {		// if const?
+		if (idx > count)
 			throw 500;
 		return queue[idx];
 	}
 };
+
+// class for service window
+struct Window {
+	int id;
+	double server_end_time;
+	bool busy;
+	Heap<Customer> customer_queue;
+	Heap<Customer> servered_customer_queue;
+	// calculate the total service time for new customer's enqueue strategy
+	// chose the smallest windows
+	Window() {
+		id = 0;
+		server_end_time = 0;
+		busy = false;
+	}
+	double getWaitTime() {
+		double alltime = 0;
+		for (int i = 1; i <= customer_queue.count; i++) {
+			alltime = alltime + customer_queue[i].server_time;
+		}
+		return server_end_time + alltime;
+	}
+	int getMaximunLength(){
+		return customer_queue.maxLength;
+	}
+};
+
+/*struct Server: public Heap {
+ double idelTime;
+
+ };*/
 
 int main() {
 	cout << "Data Structure - Simulation (ass2)" << endl;
@@ -161,28 +239,35 @@ int main() {
 #ifdef NDEBUG
 	cout << "Now, processing file [ " << filename << "]" << endl;
 #endif
-	Simulation queue;
-	int _serverCount;
+	Heap<Customer> queue;
+	int _windowCount;
 	double _arriveTime, _serverTime;
 	string line;
 	fstream fp(filename.c_str(), ios::in);
 	if (fp.is_open()) {
 		if (!fp.eof() && fp.good()) {
-			fp >> _serverCount;
+			fp >> _windowCount;
 			fp.sync();
 		}
 #ifdef NDEBUG
-		cout << "The total servers is " << _serverCount << "." << endl;
+		cout << "The total servers is " << _windowCount << "." << endl;
 #endif
 		while (fp >> _arriveTime >> _serverTime) {
 			fp.sync();
-			Event tmp(_arriveTime, _serverTime);
+			Customer tmp(_arriveTime, _serverTime);
 			queue.push(tmp);
 		}
 		fp.close();
 	} else {
 		cout << "cannot open file [ " << filename << "]" << endl;
 	}
+
+	// initialize simulation
+	Window *win = new Window[_windowCount];
+	for (int i = 0; i < _windowCount; ++i) {
+		win[i].id = i;
+	}
+
 	cout << queue;
 	return 0;
 }
