@@ -83,6 +83,7 @@ int main() {
 	cout << "Make a Heap Test array[7, 2, 9, 5, 1, 3, 8, 4]" << endl; // prints Assignment
 	int size = 8;
 	int arr[8] = { 7, 2, 9, 5, 1, 3, 8, 4 };
+	// make biggest heap
 	for (int i = size / 2; i >= 0; --i) {
 		siftdown<int, 8>(arr, i);
 	}
