@@ -11,6 +11,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cstdio>
+#include <cmath>
 #include <typeinfo>
 
 template<class T> class Matrix {
@@ -184,6 +185,58 @@ public:
 			}
 		}
 		return true;
+	}
+
+	bool operator!=(const Matrix<T> &other) {
+		if (this->getRows() != other.getRows() || this->getCols() != other.getCols())
+			throw 2;
+		double a, b;
+		for (int r = 0; r < this->getRows(); ++r) {
+			for (int c = 0; c < this->getCols(); ++c) {
+				a = ((double) ((int) ((this->m_data[r][c] + 0.0005) * 1000))) / 1000;
+				b = ((double) ((int) ((other.m_data[r][c] + 0.0005) * 1000))) / 1000;
+				if (a != b)
+					return true;
+			}
+		}
+		return false;
+	}
+
+	Matrix<T> transpose() {
+		Matrix<T> result(this->getCols(), this->getRows());
+		for (int r = 0; r < this->getRows(); r++)
+			for (int c = 0; c < this->getCols(); c++) {
+				result.m_data[c][r] = this->m_data[r][c];
+			}
+		return result;
+	}
+
+	void setData(T *data, int size) {
+		if (this->getRows() * this->getCols() != size)
+			throw 3;
+		int idx = 0;
+		for (int r = 0; r < this->getRows(); ++r) {
+			for (int c = 0; c < this->getCols(); ++c) {
+				this->m_data[r][c] = data[idx];
+				idx++;
+			}
+		}
+	}
+
+	void norm() {
+		if (this->getCols() != 1 && this->getRows() != 1)
+			throw 4;
+		T tmp = 0;
+		for (int r = 0; r < this->getRows(); r++)
+			for (int c = 0; c < this->getCols(); c++) {
+				//tmp = pow(this->m_data[r][c], 2) + tmp;
+				tmp = this->m_data[r][c] + tmp;
+			}
+		//tmp = sqrt(tmp);
+		for (int r = 0; r < this->getRows(); r++)
+			for (int c = 0; c < this->getCols(); c++) {
+				this->m_data[r][c] = this->m_data[r][c] / tmp;
+			}
 	}
 };
 

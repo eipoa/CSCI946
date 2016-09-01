@@ -11,6 +11,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cstdio>
+#include <cmath>
 #include <typeinfo>
 
 template<class T> class Matrix {
@@ -202,7 +203,7 @@ public:
 	}
 
 	Matrix<T> transpose() {
-		Matrix<T> result(this->getRows(), this->getCols());
+		Matrix<T> result(this->getCols(), this->getRows());
 		for (int r = 0; r < this->getRows(); r++)
 			for (int c = 0; c < this->getCols(); c++) {
 				result.m_data[c][r] = this->m_data[r][c];
@@ -220,6 +221,22 @@ public:
 				idx++;
 			}
 		}
+	}
+
+	void norm() {
+		if (this->getCols() != 1 && this->getRows() != 1)
+			throw 4;
+		T tmp = 0;
+		for (int r = 0; r < this->getRows(); r++)
+			for (int c = 0; c < this->getCols(); c++) {
+				//tmp = pow(this->m_data[r][c], 2) + tmp;
+				tmp = this->m_data[r][c] + tmp;
+			}
+		//tmp = sqrt(tmp);
+		for (int r = 0; r < this->getRows(); r++)
+			for (int c = 0; c < this->getCols(); c++) {
+				this->m_data[r][c] = this->m_data[r][c] / tmp;
+			}
 	}
 };
 

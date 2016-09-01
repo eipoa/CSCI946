@@ -56,23 +56,13 @@ int main(int argc, char ** argv) {
 	Matrix<double> xMatrix(1, Dimension);
 	// pMatrix (Dimension, Dimension);
 	Matrix<double> pMatrix(Dimension, Dimension);
-	pMatrix(0, 2) = 1;
-	pMatrix(1, 1) = 1;
-	pMatrix(1, 2) = 1;
-	pMatrix(2, 0) = 1;
-	pMatrix(2, 2) = 1;
-	pMatrix(2, 3) = 1;
-	pMatrix(3, 3) = 1;
-	pMatrix(3, 4) = 1;
-	pMatrix(4, 6) = 1;
-	pMatrix(5, 5) = 1;
-	pMatrix(5, 6) = 1;
-	pMatrix(6, 3) = 1;
-	pMatrix(6, 4) = 1;
-	pMatrix(6, 6) = 1;
+	double data[49] = { 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0,
+			0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1 };
+	pMatrix.setData(data, 49);
 	cout << endl << "   ----------------------- Step 0 aMatrix --------------------" << endl;
 	cout << pMatrix << endl;
 	double count[Dimension] = { 0 };
+	// count the number of 1 for each rows
 	for (int r = 0; r < Dimension; ++r) {
 		for (int c = 0; c < Dimension; ++c) {
 			if (pMatrix(r, c) == 1)
@@ -82,10 +72,10 @@ int main(int argc, char ** argv) {
 		if (count[r] == 0)
 			count[r] = Dimension;
 	}
+	// calculate the proportion of jumping between them
 	for (int r = 0; r < Dimension; ++r) {
 		for (int c = 0; c < Dimension; ++c) {
 			pMatrix(r, c) = pMatrix(r, c) / count[r];
-			//pMatrix(r, c) = ((double) ((int) ((pMatrix(r, c) + 0.005) * 100))) / 100;
 		}
 	}
 	cout << "   ----------------------- Step 1 aMatrix --------------------" << endl;
@@ -104,6 +94,7 @@ int main(int argc, char ** argv) {
 
 	cout << endl << "   ----------------------- Step 2 pMatrix --------------------" << endl;
 	// convert A Matrix to P Matrix
+	// pMatrix = aMatrix * (1-alpha) + alpha/N;
 	pMatrix = pMatrix * (1 - teleportation_probability) + (teleportation_probability * 1.0) / Dimension;
 	cout << pMatrix << endl;
 
@@ -112,25 +103,25 @@ int main(int argc, char ** argv) {
 		// read initial vector x0 data from file
 		for (int c = 0; c < Dimension; ++c) {
 			fp >> xMatrix(0, c);
-			//xMatrix(0, c) = ((double) ((int) ((xMatrix(0, c) + 0.005) * 100))) / 100;
 			if (!fp.good())
 				break;
 		}
 		fp.close();
 	}
+
 	cout << endl << "   ---------------------- Step 3 xVextor ------------------------------" << endl;
 	cout << "   X000: " << xMatrix;
 	// get the steady states
-	Matrix<double> xMatrix0;
-	bool isOk = false;
-	int k = 0;
-	while (!isOk) {
-		xMatrix0 = xMatrix;
+	Matrix<double> xMatrixOld;
+	xMatrixOld = xMatrix;
+	xMatrix = xMatrix * pMatrix;
+	int k = 1;
+	cout << "   X" << setw(3) << setfill('0') << k << ": " << xMatrix;
+	while (xMatrixOld != xMatrix) {
+		xMatrixOld = xMatrix;
 		xMatrix = xMatrix * pMatrix;
 		k++;
 		cout << "   X" << setw(3) << setfill('0') << k << ": " << xMatrix;
-		if (xMatrix0 == xMatrix) //?? when is the xVector steady
-			break;
 	}
 
 	return 0;
